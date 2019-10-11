@@ -99,16 +99,20 @@ These properties describe the currently processed argument.
 Let's take a closer look at the `create()` method of the `CatsController`.
 
 ```typescript
-@@filename()
+@@filename(cats.controller.ts)
+...
 @Post()
 async create(@Body() createCatDto: CreateCatDto) {
   this.catsService.create(createCatDto);
 }
+...
 @@switch
+...
 @Post()
 async create(@Body() createCatDto) {
   this.catsService.create(createCatDto);
 }
+...
 ```
 
 Let's focus in on the `createCatDto` body parameter. Its type is `CreateCatDto`:
@@ -145,12 +149,13 @@ In the next section, you'll see how we supply the appropriate schema for a given
 
 
 ```typescript
-@@filename()
+@@filename(joi-validation.pipe.ts)
 import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import { ObjectSchema } from '@hapi/joi'
 
 @Injectable()
 export class JoiValidationPipe implements PipeTransform {
-  constructor(private readonly schema: Object) {}
+  constructor(private readonly schema: ObjectSchema) {}
 
   transform(value: any, metadata: ArgumentMetadata) {
     const { error } = this.schema.validate(value);
@@ -184,19 +189,45 @@ export class JoiValidationPipe {
 Binding pipes (tying them to the appropriate controller or handler) is very straightforward. We use the `@UsePipes()` decorator and create a pipe instance, passing it a Joi validation schema.
 
 ```typescript
+@@filename(create-cat.schema.ts)
+import {ObjectSchema, object as jobject, string as jstring, number as jnumber } from '@hapi/joi';
+
+export const createCatSchema: ObjectSchema = jobject().keys({
+  name: jstring().alphanum().required(),
+  age: jnumber().required(),
+  breed: jstring().alphanum().required()
+});
+@@switch
+import {ObjectSchema, object as jobject, string as jstring, number as jnumber } from '@hapi/joi';
+
+export const createCatSchema = jobject().keys({
+  name: jstring().alphanum().required(),
+  age: jnumber().required(),
+  breed: jstring().alphanum().required()
+});
+
+```
+
+```typescript
 @@filename()
+import { createCatSchema } from './schema/create-cat.schema';
+...
 @Post()
 @UsePipes(new JoiValidationPipe(createCatSchema))
 async create(@Body() createCatDto: CreateCatDto) {
   this.catsService.create(createCatDto);
 }
+...
 @@switch
+import { createCatSchema } from './schema/create-cat.schema';
+...
 @Post()
 @Bind(Body())
 @UsePipes(new JoiValidationPipe(createCatSchema))
 async create(createCatDto) {
   this.catsService.create(createCatDto);
 }
+...
 ```
 
 #### Class validator
